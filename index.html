@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jarvis Assistant</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+  </head>
+<body>
+  <div class="container-wrapper">
+    <div class="chat-container">
+      <header class="chat-header">Jarvis AI</header>
+      <main id="chat-box" class="chat-box">
+        <div id="initial-prompt" class="initial-prompt">
+          <div class="prompt-icon">
+             <img src="/static/jarvis_logo.png" alt="Jarvis Logo">
+          </div>
+          <div>Ask Jarvis anything</div>
+        </div>
+      </main>
+      <div class="chat-input-area">
+        <input type="text" id="user-input" placeholder="How can I help you today?" autocomplete="off" />
+        <button id="send-button">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const chatBox = document.getElementById('chat-box');
+    const initialPrompt = document.getElementById('initial-prompt'); // Get the initial prompt element
+
+    let firstMessageSent = false; // Flag to track if any message has been sent
+    let loadingMessageElement = null; // To keep track of the loading message bubble
+
+    // Function to add a message to the chat box
+    function addMessage(sender, text) {
+      // Hide the initial prompt if it's visible
+      if (initialPrompt && initialPrompt.style.display !== 'none') {
+          initialPrompt.style.display = 'none';
+      }
+
+      const messageContainer = document.createElement('div');
+      // Use 'user' and 'jarvis' classes for styling
+      messageContainer.className = `message-container ${sender === 'user' ? 'user' : 'jarvis'}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+
+      if (sender === 'jarvis') {
+          const logoImg = document.createElement('img');
+          logoImg.src = '/static/jarvis_logo.png'; // Path to your Jarvis logo file
+          logoImg.alt = 'Jarvis Logo';
+          avatar.appendChild(logoImg);
+      } else {
+           // User avatars are hidden in CSS for this design, but if you want them:
+           // avatar.innerText = 'You';
+           // messageContainer.appendChild(avatar); // Uncomment this line in the user block below
+      }
+
+
+      const messageContent = document.createElement('div');
+      messageContent.className = 'message-content';
+      messageContent.innerText = text; // Display the message text
+
+      // Append elements based on sender for layout
+      if (sender === 'user') {
+        messageContainer.appendChild(messageContent);
+        // Optional: if you want user avatars, uncomment the line below
+        // messageContainer.appendChild(avatar);
+      } else {
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(messageContent);
+      }
+
+      chatBox.appendChild(messageContainer); // Add the message container to the chat box
+      chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the latest message
+
+      // After adding the first message (either user or Jarvis), change placeholder
+      if (!firstMessageSent) {
+          input.placeholder = 'Reply to Jarvis';
+          firstMessageSent = true;
+      }
+      return messageContainer; // Return the created message element
+    }
+
+    // Function to add a loading message bubble
+    function addLoadingMessage() {
+        // Check if a loading message already exists to prevent duplicates
+        if (loadingMessageElement) {
+            return;
+        }
+
+        // Ensure the initial prompt is hidden when loading starts
+        if (initialPrompt && initialPrompt.style.display !== 'none') {
+             initialPrompt.style.display = 'none';
+        }
+
+
+        const messageContainer = document.createElement('div');
+        messageContainer.className = 'message-container jarvis'; // It's a Jarvis "message"
+
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        const logoImg = document.createElement('img');
+        logoImg.src = '/static/jarvis_logo.png'; // Path to your Jarvis logo file
+        logoImg.alt = 'Jarvis Logo';
+        avatar.appendChild(logoImg);
+
+
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content loading'; // Add loading class for CSS animation
+        messageContent.innerHTML = '<span></span><span></span><span></span>'; // Dots for loading
+
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(messageContent);
+        chatBox.appendChild(messageContainer);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        loadingMessageElement = messageContainer; // Store reference
+        return messageContainer;
+    }
+
+    // Function to remove the loading message bubble
+    function removeLoadingMessage() {
+        if (loadingMessageElement) {
+            chatBox.removeChild(loadingMessageElement);
+            loadingMessageElement = null;
+        }
+    }
+
+    // Function to send a message
+    async function sendMessage() {
+      const userMessage = input.value.trim(); // Get input value and remove whitespace
+      if (!userMessage) return; // Don't send empty messages
+
+      addMessage('user', userMessage); // Add user message to the chat box
+      input.value = ''; // Clear the input field
+      sendButton.disabled = true; // Disable send button while waiting for response
+
+      addLoadingMessage(); // Add the loading message bubble
+
+      try {
+        // Send message to the backend
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: userMessage })
+        });
+        const data = await res.json(); // Parse the JSON response
+
+        removeLoadingMessage(); // Remove loading message before adding response
+        addMessage('jarvis', data.response || 'No response.'); // Add Jarvis response
+
+      } catch (error) {
+        console.error('Error sending message:', error); // Log any errors
+        removeLoadingMessage(); // Remove loading message even on error
+        addMessage('jarvis', '⚠️ Server Error. Please try again.'); // Show error message to user
+      } finally {
+        sendButton.disabled = false; // Re-enable send button
+        input.focus(); // Set focus back to the input field
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+
+    input.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default form submission behavior
+        sendMessage(); // Call the sendMessage function
+      }
+    });
+
+    window.addEventListener('load', () => {
+        input.focus();
+        // Initial placeholder is set in HTML and handled by the firstMessageSent flag
+    });
+  </script>
+</body>
+</html>
