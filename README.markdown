@@ -26,7 +26,7 @@ A JARVIS-inspired AI assistant built with Python, LangChain, and Ollama, featuri
 ## Setup Instructions
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/<your-username>/JarvisAI.git
+   git clone https://github.com/StealthTensor/JarvisAI.git
    cd JarvisAI
    ```
 
